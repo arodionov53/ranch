@@ -85,6 +85,7 @@ listen(Opts) ->
 -spec accept(inet:socket(), timeout())
 	-> {ok, inet:socket()} | {error, closed | timeout | atom()}.
 accept(LSocket, Timeout) ->
+	statsderl:increment([<<"connections.accept">>], 1, 0.01),
 	gen_tcp:accept(LSocket, Timeout).
 
 %% @private Experimental. Open a connection to the given host and port number.
@@ -166,4 +167,5 @@ sockname(Socket) ->
 %% @see gen_tcp:close/1
 -spec close(inet:socket()) -> ok.
 close(Socket) ->
+	statsderl:increment([<<"connections.close">>], 1, 0.01),
 	gen_tcp:close(Socket).
