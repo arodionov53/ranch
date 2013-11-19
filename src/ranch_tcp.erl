@@ -87,7 +87,7 @@ listen(Opts) ->
 accept(LSocket, Timeout) ->
 	statsderl:increment([<<"connections.accept">>], 1, 0.01),
     inet:setopts(LSocket, [
-        {send_timeout, 5000},
+        {send_timeout, 1500},
         {send_timeout_close, true}
     ]),
 	gen_tcp:accept(LSocket, Timeout).
