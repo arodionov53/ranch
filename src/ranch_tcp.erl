@@ -86,6 +86,10 @@ listen(Opts) ->
 	-> {ok, inet:socket()} | {error, closed | timeout | atom()}.
 accept(LSocket, Timeout) ->
 	statsderl:increment([<<"connections.accept">>], 1, 0.01),
+    inet:setopts(LSocket, [
+        {send_timeout, 5000},
+        {send_timeout_close, true}
+    ]),
 	gen_tcp:accept(LSocket, Timeout).
 
 %% @private Experimental. Open a connection to the given host and port number.
