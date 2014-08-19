@@ -110,6 +110,8 @@ loop(State=#state{parent=Parent, ref=Ref, conn_type=ConnType,
 		transport=Transport, protocol=Protocol, opts=Opts,
 		ack_timeout=AckTimeout, max_conns=MaxConns},
 		CurConns, NbChildren, Sleepers) ->
+
+	statsderl:gauge([<<"connections.count">>], CurConns, 0.01),
 	receive
 		{?MODULE, start_protocol, To, Socket} ->
 			case Protocol:start_link(Ref, Socket, Transport, Opts) of

@@ -66,6 +66,7 @@ listen(Opts) ->
 -spec accept(inet:socket(), timeout())
 	-> {ok, inet:socket()} | {error, closed | timeout | atom()}.
 accept(LSocket, Timeout) ->
+	statsderl:increment([<<"connections.accept">>], 1, 0.01),
 	gen_tcp:accept(LSocket, Timeout).
 
 -spec accept_ack(inet:socket(), timeout()) -> ok.
@@ -168,4 +169,5 @@ shutdown(Socket, How) ->
 
 -spec close(inet:socket()) -> ok.
 close(Socket) ->
+	statsderl:increment([<<"connections.close">>], 1, 0.01),
 	gen_tcp:close(Socket).
