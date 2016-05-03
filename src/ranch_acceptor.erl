@@ -15,40 +15,29 @@
 -module(ranch_acceptor).
 
 -export([start_link/3]).
--export([loop/3]).
+-export([loop/4]).
 
--spec start_link(inet:socket(), module(), pid())
+-spec start_link(ranch:ref(), inet:socket(), module())
 	-> {ok, pid()}.
-start_link(LSocket, Transport, ConnsSup) ->
-	Pid = spawn_link(?MODULE, loop, [LSocket, Transport, ConnsSup]),
+start_link(Ref, LSocket, Transport) ->
+	Opts = ranch_server:get_protocol_options(Ref),
+	Pid = spawn_link(?MODULE, loop, [Ref, LSocket, Transport, Opts]),
 	{ok, Pid}.
 
--spec loop(inet:socket(), module(), pid()) -> no_return().
-loop(LSocket, Transport, ConnsSup) ->
-	_ = case Transport:accept(LSocket, infinity) of
-		{ok, CSocket} ->
-			Transport:controlling_process(CSocket, ConnsSup),
-			%% This call will not return until process has been started
-			%% AND we are below the maximum number of connections.
-			ranch_conns_sup:start_protocol(ConnsSup, CSocket);
-		%% Reduce the accept rate if we run out of file descriptors.
-		%% We can't accept anymore anyway, so we might as well wait
-		%% a little for the situation to resolve itself.
-		{error, emfile} ->
-			receive after 100 -> ok end;
-		%% We want to crash if the listening socket got closed.
-		{error, Reason} when Reason =/= closed ->
-			ok
-	end,
-	flush(),
-	?MODULE:loop(LSocket, Transport, ConnsSup).
+-spec loop(ranch:ref(), inet:socket(), module(), any()) -> no_return().
+loop(Ref, LSocket, Transport, Opts) ->
+	process_flag(trap_exit, true),
+	cowboy_protocol:start_link(self(), Ref, LSocket, Transport, Opts),
+	receive_loop(Ref, LSocket, Transport, Opts).
 
-flush() ->
-	receive Msg ->
-		error_logger:error_msg(
-			"Ranch acceptor received unexpected message: ~p~n",
-			[Msg]),
-		flush()
-	after 0 ->
-		ok
+receive_loop(Ref, LSocket, Transport, Opts) ->
+	receive
+		accepted ->
+			?MODULE:loop(Ref, LSocket, Transport, Opts);
+		{'EXIT', _Pid, normal} ->
+			receive_loop(Ref, LSocket, Transport, Opts);
+		Msg ->
+			luger:info("ranch", "unexpected msg: ~p~n", [Msg]),
+			receive_loop(Ref, LSocket, Transport, Opts)
 	end.
+
