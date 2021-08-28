@@ -14,15 +14,14 @@
 
 -module(ranch_acceptor).
 
--export([start_link/4]).
+-export([start_link/5]).
 -export([loop/5]).
 
--spec start_link(inet:socket(), module(), ranch:ref(), module())
+-spec start_link(inet:socket(), module(), ranch:ref(), module(), any())
 	-> {ok, pid()}.
 
-start_link(LSocket, Transport, Ref, Protocol) ->
-    Opts = ranch_server:get_protocol_options(Ref),
-	Pid = spawn_link(?MODULE, loop, [LSocket, Transport, Ref, Protocol, Opts]),
+start_link(LSocket, Transport, Ref, Protocol, ProtoOpts) ->
+	Pid = spawn_link(?MODULE, loop, [LSocket, Transport, Ref, Protocol, ProtoOpts]),
 	{ok, Pid}.
 
 -spec loop(inet:socket(), module(), ranch:ref(), module(), any()) ->

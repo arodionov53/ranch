@@ -20,15 +20,15 @@
 
 -spec start_link(ranch:ref(), non_neg_integer(), module(), any(), module(), any())
 	-> {ok, pid()}.
-start_link(Ref, NbAcceptors, Transport, TransOpts, Protocol, _ProtoOpts) ->
+start_link(Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts) ->
 	supervisor:start_link(?MODULE, {
-		Ref, NbAcceptors, Transport, TransOpts, Protocol
+		Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts
 	}).
 
-init({Ref, NbAcceptors, Transport, TransOpts, Protocol}) ->
+init({Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts}) ->
 	ChildSpecs = [
 		{ranch_acceptors_sup, {ranch_acceptors_sup, start_link,
-				[Ref, NbAcceptors, Transport, TransOpts, Protocol]},
+				[Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts]},
 			permanent, infinity, supervisor, [ranch_acceptors_sup]}
 	],
 	{ok, {{rest_for_one, 10, 10}, ChildSpecs}}.
