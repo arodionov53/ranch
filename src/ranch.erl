@@ -44,27 +44,8 @@ start_listener(Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts)
 		false ->
 			{error, badarg};
 		true ->
-			Res = supervisor:start_child(ranch_sup, child_spec(Ref, NbAcceptors,
-					Transport, TransOpts, Protocol, ProtoOpts)),
-			Socket = proplists:get_value(socket, TransOpts),
-			case Res of
-				{ok, Pid} when Socket =/= undefined ->
-					%% Give ownership of the socket to ranch_acceptors_sup
-					%% to make sure the socket stays open as long as the
-					%% listener is alive. If the socket closes however there
-					%% will be no way to recover because we don't know how
-					%% to open it again.
-					Children = supervisor:which_children(Pid),
-					{_, AcceptorsSup, _, _}
-						= lists:keyfind(ranch_acceptors_sup, 1, Children),
-					%%% Note: the catch is here because SSL crashes when you change
-					%%% the controlling process of a listen socket because of a bug.
-					%%% The bug will be fixed in R16.
-					catch Transport:controlling_process(Socket, AcceptorsSup);
-				_ ->
-					ok
-			end,
-			Res
+            supervisor:start_child(ranch_sup, child_spec(Ref, NbAcceptors,
+			    Transport, TransOpts, Protocol, ProtoOpts))
 	end.
 
 -spec stop_listener(ref()) -> ok | {error, not_found}.

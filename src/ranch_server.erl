@@ -27,7 +27,6 @@
 -export([get_max_connections/1]).
 -export([set_protocol_options/2]).
 -export([get_protocol_options/1]).
--export([count_connections/1]).
 
 %% gen_server.
 -export([init/1]).
@@ -93,10 +92,6 @@ set_protocol_options(Ref, ProtoOpts) ->
 -spec get_protocol_options(ranch:ref()) -> any().
 get_protocol_options(Ref) ->
 	ets:lookup_element(?TAB, {opts, Ref}, 2).
-
--spec count_connections(ranch:ref()) -> non_neg_integer().
-count_connections(Ref) ->
-	ranch_conns_sup:active_connections(get_connections_sup(Ref)).
 
 %% gen_server.
 
