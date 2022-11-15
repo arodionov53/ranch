@@ -60,7 +60,7 @@ listen(Opts) ->
 	gen_tcp:listen(0, ranch:filter_options(Opts4,
 		[backlog, ip, linger, nodelay, port, raw,
 			send_timeout, send_timeout_close],
-		[binary, {active, false}, {packet, raw},
+		[{inet_backend, socket}, binary, {active, false}, {packet, raw},
 			{reuseaddr, true}, {nodelay, true}])).
 
 -spec accept(inet:socket(), timeout())
@@ -79,7 +79,7 @@ accept_ack(_, _) ->
 	-> {ok, inet:socket()} | {error, atom()}.
 connect(Host, Port, Opts) when is_integer(Port) ->
 	gen_tcp:connect(Host, Port,
-		Opts ++ [binary, {active, false}, {packet, raw}]).
+		Opts ++ [{inet_backend, socket}, binary, {active, false}, {packet, raw}]).
 
 %% @todo Probably filter Opts?
 -spec connect(inet:ip_address() | inet:hostname(),
