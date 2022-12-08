@@ -32,6 +32,11 @@
 % copied from ranch 2
 % --------------------------------------------------------------------------
 -export([info/0]).
+-export([info/1]).
+-export([procs/2]).
+-export([get_status/1]).
+-export([get_addr/1]).
+% --------------------------------------------------------------------------
 
 
 -type max_conns() :: non_neg_integer() | infinity.
@@ -85,9 +90,9 @@ remove_connection(Ref) ->
 	ConnsSup ! {remove_connection, Ref},
 	ok.
 
--spec get_port(ref()) -> inet:port_number().
-get_port(Ref) ->
-	ranch_server:get_port(Ref).
+% -spec get_port(ref()) -> inet:port_number().
+% get_port(Ref) ->
+% 	ranch_server:get_port(Ref).
 
 -spec get_max_connections(ref()) -> max_conns().
 get_max_connections(Ref) ->
@@ -152,4 +157,122 @@ require([App|Tail]) ->
 % copied from ranch 2
 % --------------------------------------------------------------------------
 
-info() -> {?MODULE, ?FUNCTION_NAME}.
+-spec info() -> #{ref() := #{atom() := term()}}.
+info() ->
+	lists:foldl(
+		fun ({Ref, Pid}, Acc) ->
+			Acc#{Ref => listener_info(Ref, Pid)}
+		end,
+		#{},
+		ranch_server:get_listener_sups()
+	).
+
+-spec info(ref()) -> #{atom() := term()}.
+info(Ref) ->
+	Pid = ranch_server:get_listener_sup(Ref),
+	listener_info(Ref, Pid).
+
+listener_info(Ref, Pid) ->
+	[_, Transport, _, Protocol, _] = ranch_server:get_listener_start_args(Ref),
+	Status = get_status(Ref),
+	{IP, Port} = case get_addr(Ref) of
+		Addr = {local, _} ->
+			{Addr, undefined};
+		Addr ->
+			Addr
+	end,
+	MaxConns = get_max_connections(Ref),
+	TransOpts = ranch_server:get_transport_options(Ref),
+	ProtoOpts = get_protocol_options(Ref),
+	#{
+		pid => Pid,
+		status => Status,
+		ip => IP,
+		port => Port,
+		max_connections => MaxConns,
+		active_connections => get_connections(Ref, active),
+		all_connections => get_connections(Ref, all),
+		transport => Transport,
+		transport_options => TransOpts,
+		protocol => Protocol,
+		protocol_options => ProtoOpts,
+		metrics => metrics(Ref)
+	}.
+
+-spec procs(ref(), acceptors | connections) -> [pid()].
+procs(Ref, Type) ->
+	ListenerSup = ranch_server:get_listener_sup(Ref),
+	procs1(ListenerSup, Type).
+
+procs1(ListenerSup, acceptors) ->
+	{_, SupPid, _, _} = lists:keyfind(ranch_acceptors_sup, 1,
+		supervisor:which_children(ListenerSup)),
+	try
+		[Pid || {_, Pid, _, _} <- supervisor:which_children(SupPid)]
+	catch exit:{noproc, _} ->
+		[]
+	end;
+procs1(ListenerSup, connections) ->
+	{_, SupSupPid, _, _} = lists:keyfind(ranch_conns_sup_sup, 1,
+		supervisor:which_children(ListenerSup)),
+	Conns=
+	lists:map(fun ({_, SupPid, _, _}) ->
+			[Pid || {_, Pid, _, _} <- supervisor:which_children(SupPid)]
+		end,
+		supervisor:which_children(SupSupPid)
+	),
+	lists:flatten(Conns).
+
+-spec metrics(ref()) -> #{}.
+metrics(Ref) ->
+	Counters = ranch_server:get_stats_counters(Ref),
+	CounterInfo = counters:info(Counters),
+	NumCounters = maps:get(size, CounterInfo),
+	NumConnsSups = NumCounters div 2,
+	lists:foldl(
+		fun (Id, Acc) ->
+			Acc#{
+				{conns_sup, Id, accept} => counters:get(Counters, 2*Id-1),
+				{conns_sup, Id, terminate} => counters:get(Counters, 2*Id)
+			}
+		end,
+		#{},
+		lists:seq(1, NumConnsSups)
+	).
+
+-spec get_status(ref()) -> running | suspended.
+get_status(Ref) ->
+	ListenerSup = ranch_server:get_listener_sup(Ref),
+	Children = supervisor:which_children(ListenerSup),
+	case lists:keyfind(ranch_acceptors_sup, 1, Children) of
+		{_, undefined, _, _} ->
+			suspended;
+		_ ->
+			running
+	end.
+
+-spec get_addr(ref()) -> {inet:ip_address(), inet:port_number()} |
+	{local, binary()} | {undefined, undefined}.
+get_addr(Ref) ->
+	ranch_server:get_addr(Ref).
+
+-spec get_port(ref()) -> inet:port_number() | undefined.
+get_port(Ref) ->
+	case get_addr(Ref) of
+		{local, _} ->
+			undefined;
+		{_, Port} ->
+			Port
+	end.
+
+-spec get_connections(ref(), active|all) -> non_neg_integer().
+get_connections(Ref, active) ->
+	SupCounts = [ranch_conns_sup:active_connections(ConnsSup) ||
+		{_, ConnsSup} <- ranch_server:get_connections_sups(Ref)],
+	lists:sum(SupCounts);
+get_connections(Ref, all) ->
+	SupCounts = [proplists:get_value(active, supervisor:count_children(ConnsSup)) ||
+		{_, ConnsSup} <- ranch_server:get_connections_sups(Ref)],
+	lists:sum(SupCounts).
+
+% --------------------------------------------------------------------------
