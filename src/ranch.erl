@@ -28,6 +28,12 @@
 -export([set_option_default/3]).
 -export([require/1]).
 
+% --------------------------------------------------------------------------
+% copied from ranch 2
+% --------------------------------------------------------------------------
+-export([info/0]).
+
+
 -type max_conns() :: non_neg_integer() | infinity.
 -export_type([max_conns/0]).
 
@@ -140,3 +146,10 @@ require([App|Tail]) ->
 		{error, {already_started, App}} -> ok
 	end,
 	require(Tail).
+
+
+% --------------------------------------------------------------------------
+% copied from ranch 2
+% --------------------------------------------------------------------------
+
+info() -> {?MODULE, ?FUNCTION_NAME}.
