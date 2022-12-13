@@ -29,7 +29,7 @@
 -export([require/1]).
 
 % --------------------------------------------------------------------------
-% copied from ranch 2
+% copied from ranch2
 % --------------------------------------------------------------------------
 -export([info/0]).
 -export([info/1]).
@@ -89,10 +89,6 @@ remove_connection(Ref) ->
 	ConnsSup = ranch_server:get_connections_sup(Ref),
 	ConnsSup ! {remove_connection, Ref},
 	ok.
-
-% -spec get_port(ref()) -> inet:port_number().
-% get_port(Ref) ->
-% 	ranch_server:get_port(Ref).
 
 -spec get_max_connections(ref()) -> max_conns().
 get_max_connections(Ref) ->
@@ -154,11 +150,12 @@ require([App|Tail]) ->
 
 
 % --------------------------------------------------------------------------
-% copied from ranch 2
+% copied from ranch2
 % --------------------------------------------------------------------------
 
 -spec info() -> #{ref() := #{atom() := term()}}.
 info() ->
+	% {?MODULE, ?FUNCTION_NAME}.
 	lists:foldl(
 		fun ({Ref, Pid}, Acc) ->
 			Acc#{Ref => listener_info(Ref, Pid)}
@@ -173,7 +170,7 @@ info(Ref) ->
 	listener_info(Ref, Pid).
 
 listener_info(Ref, Pid) ->
-	[_, Transport, _, Protocol, _] = ranch_server:get_listener_start_args(Ref),
+	[_, Transport, _, _, Protocol, _] = ranch_server:get_listener_start_args(Ref),
 	Status = get_status(Ref),
 	{IP, Port} = case get_addr(Ref) of
 		Addr = {local, _} ->
@@ -225,20 +222,21 @@ procs1(ListenerSup, connections) ->
 
 -spec metrics(ref()) -> #{}.
 metrics(Ref) ->
-	Counters = ranch_server:get_stats_counters(Ref),
-	CounterInfo = counters:info(Counters),
-	NumCounters = maps:get(size, CounterInfo),
-	NumConnsSups = NumCounters div 2,
-	lists:foldl(
-		fun (Id, Acc) ->
-			Acc#{
-				{conns_sup, Id, accept} => counters:get(Counters, 2*Id-1),
-				{conns_sup, Id, terminate} => counters:get(Counters, 2*Id)
-			}
-		end,
-		#{},
-		lists:seq(1, NumConnsSups)
-	).
+	#{}.
+	% Counters = ranch_server:get_stats_counters(Ref),
+	% CounterInfo = counters:info(Counters),
+	% NumCounters = maps:get(size, CounterInfo),
+	% NumConnsSups = NumCounters div 2,
+	% lists:foldl(
+	% 	fun (Id, Acc) ->
+	% 		Acc#{
+	% 			{conns_sup, Id, accept} => counters:get(Counters, 2*Id-1),
+	% 			{conns_sup, Id, terminate} => counters:get(Counters, 2*Id)
+	% 		}
+	% 	end,
+	% 	#{},
+	% 	lists:seq(1, NumConnsSups)
+	% ).
 
 -spec get_status(ref()) -> running | suspended.
 get_status(Ref) ->
@@ -275,4 +273,9 @@ get_connections(Ref, all) ->
 		{_, ConnsSup} <- ranch_server:get_connections_sups(Ref)],
 	lists:sum(SupCounts).
 
+% --------------------------------------------------------------------------
+% curl -i http://localhost:8080
+% 
+% ets:tab2list(ranch_server).
+% ranch:info().
 % --------------------------------------------------------------------------

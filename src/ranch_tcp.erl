@@ -57,11 +57,11 @@ listen(Opts) ->
 	%% We set the port to 0 because it is given in the Opts directly.
 	%% The port in the options takes precedence over the one in the
 	%% first argument.
-	gen_tcp:listen(0, ranch:filter_options(Opts4,
+	gen_tcp:listen(0, [{inet_backend, socket} | ranch:filter_options(Opts4,
 		[backlog, ip, linger, nodelay, port, raw,
 			send_timeout, send_timeout_close],
 		[binary, {active, false}, {packet, raw},
-			{reuseaddr, true}, {nodelay, true}])).
+			{reuseaddr, true}, {nodelay, true}])]).
 
 -spec accept(inet:socket(), timeout())
 	-> {ok, inet:socket()} | {error, closed | timeout | atom()}.
@@ -79,7 +79,7 @@ accept_ack(_, _) ->
 	-> {ok, inet:socket()} | {error, atom()}.
 connect(Host, Port, Opts) when is_integer(Port) ->
 	gen_tcp:connect(Host, Port,
-		Opts ++ [binary, {active, false}, {packet, raw}]).
+		Opts ++ [binary, {inet_backend, socket}, {active, false}, {packet, raw}]).
 
 %% @todo Probably filter Opts?
 -spec connect(inet:ip_address() | inet:hostname(),
@@ -87,7 +87,7 @@ connect(Host, Port, Opts) when is_integer(Port) ->
 	-> {ok, inet:socket()} | {error, atom()}.
 connect(Host, Port, Opts, Timeout) when is_integer(Port) ->
 	gen_tcp:connect(Host, Port,
-		Opts ++ [binary, {active, false}, {packet, raw}],
+		Opts ++ [binary, {inet_backend, socket}, {active, false}, {packet, raw}],
 		Timeout).
 
 -spec recv(inet:socket(), non_neg_integer(), timeout())

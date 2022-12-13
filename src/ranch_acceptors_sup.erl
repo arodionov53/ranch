@@ -26,8 +26,9 @@ start_link(Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts) ->
 
 init([Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts]) ->
 	{ok, LSocket} = Transport:listen(TransOpts),
-	{ok, {_, Port}} = Transport:sockname(LSocket),
+	{ok, Addr = {_, Port}} = Transport:sockname(LSocket),
 	ranch_server:set_port(Ref, Port),
+	ranch_server:set_addr(Ref, Addr),          % from ranch2
 
 	Procs = [
 		{{acceptor, self(), N}, {ranch_acceptor, start_link, [

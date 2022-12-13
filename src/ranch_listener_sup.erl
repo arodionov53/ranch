@@ -21,11 +21,17 @@
 -spec start_link(ranch:ref(), non_neg_integer(), module(), any(), module(), any())
 	-> {ok, pid()}.
 start_link(Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts) ->
+	% MaxConns = maps:get(max_connections, TransOpts, 1024),  % from ranch2
+	MaxConns = 1024,
+	ranch_server:set_new_listener_opts(Ref, MaxConns, TransOpts, ProtoOpts,
+		[Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts]),   % from ranch2
 	supervisor:start_link(?MODULE, {
 		Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts
 	}).
 
 init({Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts}) ->
+	ok = ranch_server:set_listener_sup(Ref, self()),   % from ranch2
+
 	ChildSpecs = [
 		{ranch_acceptors_sup, {ranch_acceptors_sup, start_link,
 				[Ref, NbAcceptors, Transport, TransOpts, Protocol, ProtoOpts]},

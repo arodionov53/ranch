@@ -22,6 +22,7 @@
 
 start_link(LSocket, Transport, Ref, Protocol, ProtoOpts) ->
 	Pid = spawn_link(?MODULE, loop, [LSocket, Transport, Ref, Protocol, ProtoOpts]),
+	ranch_server:add_acceptor(Ref, Pid, LSocket),
 	{ok, Pid}.
 
 -spec loop(inet:socket(), module(), ranch:ref(), module(), any()) ->
@@ -33,6 +34,7 @@ loop(LSocket, Transport, Ref, Protocol, Opts) ->
 		{ok, CSocket} ->
 			case Protocol:start_link(Ref, CSocket, Transport, Opts) of
 				{ok, Pid} ->
+					ranch_server:add_connection(Ref, Pid, CSocket),
 					Transport:controlling_process(CSocket, Pid);
                 _ ->
 					Transport:close(CSocket)
