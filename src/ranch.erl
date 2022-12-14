@@ -277,5 +277,8 @@ get_connections(Ref, all) ->
 % curl -i http://localhost:8080
 % 
 % ets:tab2list(ranch_server).
+% ranch_server:info(acceptors,http).
+% ranch_server:info(connections,http).
 % ranch:info().
+% [{inet:peername(S),inet:socknames(S), inet:getstat(S)} || S <- gen_tcp_socket:which_sockets()].
 % --------------------------------------------------------------------------

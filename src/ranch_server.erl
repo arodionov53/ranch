@@ -49,7 +49,7 @@
 -export([add_connection/3]).
 -export([get_acceptors/1]).
 -export([get_connections/1]).
--export([info/2, info/1]).
+-export([info/0, info/1, info/2]).
 
 % ------------------------------------------------------------------------------------------
 
@@ -106,19 +106,26 @@ get_connections(Ref) -> get_a_c(connections, Ref).
 get_a_c(Type, Ref) -> 
 	case ets:match(?TAB, {{Type, Ref}, '$1'}) of
 		[] -> [];
-		[[A] | _] -> A
+		[[A] | _] -> [X || X = {P,_} <- A, is_process_alive(P)]
 	end.
 
-info(Type) -> info(Type, http).
+info() -> 
+	[	{
+		inet:peername(Socket),
+		inet:socknames(Socket),
+		inet:getstat(Socket)
+	}  || Socket <- gen_tcp_socket:which_sockets()].
 
-info(Type, http) ->
+info(Type) -> info(Type, rtbgw).
+
+info(Type, Ref) ->
 	% [{Pid, erlang:process_info(Pid, message_queue_len), gen_tcp_socket:peername(Socket), gen_tcp_socket:info(Socket)}  || {Pid, Socket} <- get_a_c(Type, http)].
 	[	{Pid, 
 		erlang:process_info(Pid, message_queue_len), 
 		inet:peername(Socket),
 		inet:socknames(Socket),
 		inet:getstat(Socket)
-	}  || {Pid, Socket} <- get_a_c(Type, http)].
+	}  || {Pid, Socket} <- get_a_c(Type, Ref)].
 
 % ------------------------------------------------------------------------------------------
 
@@ -306,7 +313,7 @@ handle_call(_Request, _Fom, State) ->
 handle_cast({Type, Ref, Pid, Socket}, State) ->
 	Stored = case ets:match(?TAB, {{Type, Ref}, '$1'}) of
 		[] -> [];
-		[[A] | _] -> A
+		[[A] | _] -> [X || X = {P,_} <- A, is_process_alive(P)]
 	end,
 	true = ets:insert(?TAB, {{Type, Ref}, [{Pid, Socket} | Stored]}),
 	{noreply, State};
