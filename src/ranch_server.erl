@@ -121,7 +121,8 @@ info(Type) -> info(Type, rtbgw).
 info(Type, Ref) ->
 	% [{Pid, erlang:process_info(Pid, message_queue_len), gen_tcp_socket:peername(Socket), gen_tcp_socket:info(Socket)}  || {Pid, Socket} <- get_a_c(Type, http)].
 	[	{Pid, 
-		erlang:process_info(Pid, message_queue_len), 
+		erlang:process_info(Pid, message_queue_len),
+		erlang:process_info(Pid, reductions),
 		inet:peername(Socket),
 		inet:socknames(Socket),
 		inet:getstat(Socket)
