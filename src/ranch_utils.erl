@@ -10,6 +10,6 @@ median(Lst) ->
     M = L div 2,
     case L rem 2 of
         1 -> lists:nth(M+1, S);
-        0 -> (lists:nth(M, S) + lists:nth(M+1, S))/2
+        0 -> floor((lists:nth(M, S) + lists:nth(M+1, S))/2)
     end.
 

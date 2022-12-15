@@ -297,7 +297,7 @@ get_connections(Ref, all) ->
 % end.
 % QINFO = fun() -> LQ = lists:map(fun(X) -> element(2, element(2, X))  end, [ C || C <- ranch_server:info(connections), is_tuple(element(2, C))]), 
 % 	{lists:sum(LQ) /length(LQ), MEDIAN(LQ), lists:max(LQ), lists:min(LQ)} end.
-
+% ranch_server:get_queue_stat(acceptors, http).
 
 % [{inet:peername(S),inet:socknames(S), inet:getstat(S)} || S <- gen_tcp_socket:which_sockets()].
 % --------------------------------------------------------------------------
