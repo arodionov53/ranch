@@ -280,5 +280,24 @@ get_connections(Ref, all) ->
 % ranch_server:info(acceptors,http).
 % ranch_server:info(connections,http).
 % ranch:info().
+%  io:format("~p~n",[ranch_server:info(connections)]).
+% lists:sort(fun(X, Y) -> element(2, element(2, X)) > element(2, element(2, Y)) end, [ C || C <- ranch_server:info(connections), is_tuple(element(2, C))]).
+% lists:map(fun(X) -> element(2, element(2, X))  end, [ C || C <- ranch_server:info(connections), is_tuple(element(2, C))]).
+% 
+% begin f(L), L = lists:map(fun(X) -> element(2, element(2, X))  end, [ C || C <- ranch_server:info(connections), is_tuple(element(2, C))]), 
+% 	{lists:sum(L) /length(L), lists:max(L), lists:min(L)} end.
+% MEDIAN = fun(Lst) ->
+%     S = lists:sort(Lst),
+%     L = length(S),
+%     M = L div 2,
+%     case L rem 2 of
+%         1 -> lists:nth(M+1, S);
+%         0 -> (lists:nth(M, S) + lists:nth(M+1, S))/2
+%     end
+% end.
+% QINFO = fun() -> LQ = lists:map(fun(X) -> element(2, element(2, X))  end, [ C || C <- ranch_server:info(connections), is_tuple(element(2, C))]), 
+% 	{lists:sum(LQ) /length(LQ), MEDIAN(LQ), lists:max(LQ), lists:min(LQ)} end.
+
+
 % [{inet:peername(S),inet:socknames(S), inet:getstat(S)} || S <- gen_tcp_socket:which_sockets()].
 % --------------------------------------------------------------------------

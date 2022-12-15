@@ -50,7 +50,8 @@
 -export([get_acceptors/1]).
 -export([get_connections/1]).
 -export([info/0, info/1, info/2]).
-
+-export([get_queue_lengths/1, get_queue_lengths/2]).
+-export([get_queue_stat/1, get_queue_stat/2, lengths_stat/1]).
 % ------------------------------------------------------------------------------------------
 
 %% gen_server.
@@ -88,6 +89,10 @@ set_new_listener_opts(Ref, MaxConns, TransOpts, ProtoOpts, StartArgs) ->
 % ------------------------------------------------------------------------------------------
 % added AR
 % ------------------------------------------------------------------------------------------
+-type stat_res() :: tuple().
+
+-define(DEFAULT_REF, rtbgw).
+
 -spec add_acceptor(ranch:ref(), pid(), pid()) -> ok.
 add_acceptor(Ref, Pid, Socket) ->
 	gen_server:cast(?MODULE, {acceptors, Ref, Pid, Socket}).
@@ -109,6 +114,39 @@ get_a_c(Type, Ref) ->
 		[[A] | _] -> [X || X = {P,_} <- A, is_process_alive(P)]
 	end.
 
+-spec get_queue_lengths(acceptors | connections) -> [non_neg_integer()].
+% @doc returns processes queque lengths
+get_queue_lengths(Type) -> 
+	get_queue_lengths(Type, ?DEFAULT_REF).
+
+-spec get_queue_lengths(acceptors | connections, ranch:ref()) -> [non_neg_integer()].
+% @doc returns processes queque lengths
+get_queue_lengths(Type, Ref) -> 
+	[element(2, element(2, X)) || X <-[C || C <- ranch_server:info(Type, Ref), is_tuple(element(2, C))]].
+
+-spec get_queue_stat(acceptors | connections) -> stat_res().
+get_queue_stat(Type) -> 
+	get_queue_stat(Type, ?DEFAULT_REF).
+
+-spec get_queue_stat(acceptors | connections, ranch:ref()) -> stat_res().
+get_queue_stat(Type, Ref) ->
+	lengths_stat(get_queue_lengths(Type, Ref)).
+
+-spec lengths_stat([number()]) -> stat_res().
+lengths_stat([]) ->
+	{0, 0.0, 0, 0, 0};
+lengths_stat(Lst) ->
+	Len = length(Lst),
+	Mean = lists:sum(Lst) / Len,
+	Median = ranch_utils:median(Lst),
+	{Len, Mean, Median, lists:max(Lst), lists:min(Lst)}.
+
+
+% -spec info() -> [{
+% 	{ok, {ip_address(), port_number()} | returned_non_ip_address()} | {error, posix()},
+% 	{ok, {ip_address(), port_number()} | returned_non_ip_address()} | {error, posix()},
+% 	{ok, OptionValues} | {error, posix()}
+% 	]}.
 info() -> 
 	[	{
 		inet:peername(Socket),
@@ -116,8 +154,24 @@ info() ->
 		inet:getstat(Socket)
 	}  || Socket <- gen_tcp_socket:which_sockets()].
 
-info(Type) -> info(Type, rtbgw).
+% -spec info(acceptors | connections) -> [{
+% 	pid(),
+% 	{ok, {tuple(), non_neg_integer()},}
+% 	{ok, {tuple(), non_neg_integer()},}
+% 	{ok, {ip_address(), port_number()} | returned_non_ip_address()} | {error, posix()},
+% 	{ok, {ip_address(), port_number()} | returned_non_ip_address()} | {error, posix()},
+% 	{ok, OptionValues} | {error, posix()}
+% 	]}.
+info(Type) -> info(Type, ?DEFAULT_REF).
 
+% -spec info(acceptors | connections, ranch:ref()) -> [{
+% 	pid(),
+% 	{ok, {tuple(), non_neg_integer()},}
+% 	{ok, {tuple(), non_neg_integer()},}
+% 	{ok, {ip_address(), port_number()} | returned_non_ip_address()} | {error, posix()},
+% 	{ok, {ip_address(), port_number()} | returned_non_ip_address()} | {error, posix()},
+% 	{ok, OptionValues} | {error, posix()}
+% 	]}.
 info(Type, Ref) ->
 	% [{Pid, erlang:process_info(Pid, message_queue_len), gen_tcp_socket:peername(Socket), gen_tcp_socket:info(Socket)}  || {Pid, Socket} <- get_a_c(Type, http)].
 	[	{Pid, 
